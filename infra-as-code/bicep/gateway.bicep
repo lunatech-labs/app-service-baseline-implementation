@@ -17,7 +17,7 @@ param customDomainName string
 param availabilityZones array
 param gatewayCertSecretUri string
 
-// existing resource name params 
+// existing resource name params
 param vnetName string
 param appGatewaySubnetName string
 param appName string
@@ -34,7 +34,7 @@ var wafPolicyName= 'waf-${baseName}'
 // ---- Existing resources ----
 resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing =  {
   name: vnetName
-  
+
   resource appGatewaySubnet 'subnets' existing = {
     name: appGatewaySubnetName
   }
@@ -56,7 +56,7 @@ resource keyVaultSecretsUserRole 'Microsoft.Authorization/roleDefinitions@2022-0
 
 // ---- App Gateway resources ----
 
-// Managed Identity for App Gateway. 
+// Managed Identity for App Gateway.
 resource appGatewayManagedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: appGatewayManagedIdentityName
   location: location
@@ -134,17 +134,17 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
       tier: 'WAF_v2'
     }
     sslPolicy: {
-      policyType: 'Custom'
+      policyType: 'CustomV2'
       cipherSuites: [
         'TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'
         'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256'
       ]
-      minProtocolVersion: 'TLSv1_2'
+      minProtocolVersion: 'TLSv1_3'
     }
 
     gatewayIPConfigurations: [
       {
-        name: 'appGatewayIpConfig'
+        name: 'app-gateway-ip-config'
         properties: {
           subnet: {
             id: vnet::appGatewaySubnet.id
@@ -154,7 +154,7 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
     ]
     frontendIPConfigurations: [
       {
-        name: 'appGwPublicFrontendIp'
+        name: 'app-gateway-public-ip'
         properties: {
           privateIPAllocationMethod: 'Dynamic'
           publicIPAddress: {
@@ -173,10 +173,10 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
     ]
     probes: [
       {
-        name: 'probe-web${baseName}'
+        name: 'probe-https-${baseName}'
         properties: {
           protocol: 'Https'
-          path: '/favicon.ico'
+          path: '/health'
           interval: 30
           timeout: 30
           unhealthyThreshold: 3
@@ -218,7 +218,7 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
     ]
     backendHttpSettingsCollection: [
       {
-        name: 'WebAppBackendHttpSettings'
+        name: 'backend-https-${baseName}'
         properties: {
           port: 443
           protocol: 'Https'
@@ -226,17 +226,17 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
           pickHostNameFromBackendAddress: true
           requestTimeout: 20
           probe: {
-            id: resourceId('Microsoft.Network/applicationGateways/probes', appGateWayName, 'probe-web${baseName}')
+            id: resourceId('Microsoft.Network/applicationGateways/probes', appGateWayName, 'probe-https-${baseName}')
           }
         }
       }
     ]
     httpListeners: [
       {
-        name: 'WebAppListener'
+        name: 'listener-https-${baseName}'
         properties: {
           frontendIPConfiguration: {
-            id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', appGateWayName, 'appGwPublicFrontendIp')
+            id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', appGateWayName, 'app-gateway-public-ip')
           }
           frontendPort: {
             id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', appGateWayName, 'port-443')
@@ -245,7 +245,7 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
           sslCertificate: {
             id: resourceId('Microsoft.Network/applicationGateways/sslCertificates', appGateWayName, '${appGateWayName}-ssl-certificate')
           }
-          hostName: 'www.${customDomainName}'
+          hostName: customDomainName
           hostNames: []
           requireServerNameIndication: true
         }
@@ -253,18 +253,18 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
     ]
     requestRoutingRules: [
       {
-        name: 'WebAppRoutingRule'
+        name: 'https'
         properties: {
           ruleType: 'Basic'
           priority: 100
           httpListener: {
-            id: resourceId('Microsoft.Network/applicationGateways/httpListeners', appGateWayName, 'WebAppListener')
+            id: resourceId('Microsoft.Network/applicationGateways/httpListeners', appGateWayName, 'listener-https-${baseName}')
           }
           backendAddressPool: {
             id: resourceId('Microsoft.Network/applicationGateways/backendAddressPools', appGateWayName, 'pool-${appName}')
           }
           backendHttpSettings: {
-            id: resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', appGateWayName, 'WebAppBackendHttpSettings')
+            id: resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', appGateWayName, 'backend-https-${baseName}')
           }
         }
       }
@@ -281,7 +281,7 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
 
 // App Gateway diagnostics
 resource appGatewayDiagSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: '${appGateWay.name}-diagnosticSettings'
+  name: '${appGateWay.name}-diagnostic-settings'
   scope: appGateWay
   properties: {
     workspaceId: logWorkspace.id

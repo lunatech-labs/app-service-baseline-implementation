@@ -18,7 +18,6 @@ var vnetAddressPrefix = '10.0.0.0/16'
 var appGatewaySubnetPrefix = '10.0.1.0/24'
 var appServicesSubnetPrefix = '10.0.0.0/24'
 var privateEndpointsSubnetPrefix = '10.0.2.0/27'
-var agentsSubnetPrefix = '10.0.2.32/27'
 
 //Temp disable DDoS protection
 var enableDdosProtection = !developmentEnvironment
@@ -47,7 +46,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' = {
     subnets: [
       {
         //App services plan subnet
-        name: 'snet-appServicePlan'
+        name: 'snet-app-service'
         properties: {
           addressPrefix: appServicesSubnetPrefix
           networkSecurityGroup: {
@@ -65,7 +64,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' = {
       }
       {
         //App Gateway subnet
-        name: 'snet-appGateway'
+        name: 'snet-app-gateway'
         properties: {
           addressPrefix: appGatewaySubnetPrefix
           networkSecurityGroup: {
@@ -77,7 +76,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' = {
       }
       {
         //Private endpoints subnet
-        name: 'snet-privateEndpoints'
+        name: 'snet-private-endpoints'
         properties: {
           addressPrefix: privateEndpointsSubnetPrefix
           networkSecurityGroup: {
@@ -85,39 +84,26 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' = {
           }
         }
       }
-      {
-        // Build agents subnet
-        name: 'snet-agents'
-        properties: {
-          addressPrefix: agentsSubnetPrefix
-          networkSecurityGroup: {
-            id: agentsSubnetNsg.id
-          }
-        }
-      }
     ]
   }
 
   resource appGatewaySubnet 'subnets' existing = {
-    name: 'snet-appGateway'
+    name: 'snet-app-gateway'
   }
 
   resource appServiceSubnet 'subnets' existing = {
-    name: 'snet-appServicePlan'
+    name: 'snet-app-service'
   }
 
-  resource privateEnpointsSubnet 'subnets' existing = {
-    name: 'snet-privateEndpoints'
+  resource privateEndpointsSubnet 'subnets' existing = {
+    name: 'snet-private-endpoints'
   }
 
-  resource agentsSubnet 'subnets' existing = {
-    name: 'snet-agents'
-  }  
 }
 
 //App Gateway subnet NSG
 resource appGatewaySubnetNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
-  name: 'nsg-appGatewaySubnet'
+  name: 'nsg-app-gateway-subnet'
   location: location
   properties: {
     securityRules: [
@@ -150,6 +136,20 @@ resource appGatewaySubnetNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01
         }
       }
       {
+          name: 'AppGw.In.Allow8443.Internet'
+          properties: {
+            description: 'Allow ALL inbound web traffic on port 8443'
+            protocol: 'Tcp'
+            sourcePortRange: '*'
+            destinationPortRange: '8443'
+            sourceAddressPrefix: 'Internet'
+            destinationAddressPrefix: appGatewaySubnetPrefix
+            access: 'Allow'
+            priority: 111
+            direction: 'Inbound'
+          }
+        }
+      {
         name: 'AppGw.In.Allow.LoadBalancer'
         properties: {
           description: 'Allow inbound traffic from azure load balancer'
@@ -162,7 +162,7 @@ resource appGatewaySubnetNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01
           priority: 120
           direction: 'Inbound'
         }
-      }      
+      }
       {
         name: 'DenyAllInBound'
         properties: {
@@ -175,7 +175,7 @@ resource appGatewaySubnetNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01
           priority: 1000
           direction: 'Inbound'
         }
-      }  
+      }
       {
         name: 'AppGw.Out.Allow.PrivateEndpoints'
         properties: {
@@ -210,7 +210,7 @@ resource appGatewaySubnetNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01
 
 //App service subnet nsg
 resource appServiceSubnetNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
-  name: 'nsg-appServicesSubnet'
+  name: 'nsg-app-service-subnet'
   location: location
   properties: {
     securityRules: [
@@ -248,7 +248,7 @@ resource appServiceSubnetNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01
 
 //Private endpoints subnets NSG
 resource privateEndpointsSubnetNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
-  name: 'nsg-privateEndpointsSubnet'
+  name: 'nsg-private-endpoints-subnet'
   location: location
   properties: {
     securityRules: [
@@ -263,30 +263,6 @@ resource privateEndpointsSubnetNsg 'Microsoft.Network/networkSecurityGroups@2022
           destinationAddressPrefix: '*'
           access: 'Deny'
           priority: 100
-          direction: 'Outbound'
-        }
-      }      
-    ]
-  }
-}
-
-//Build agents subnets NSG
-resource agentsSubnetNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
-  name: 'nsg-agentsSubnet'
-  location: location
-  properties: {
-    securityRules: [
-      {
-        name: 'DenyAllOutBound'
-        properties: {
-          description: 'Deny outbound traffic from the build agents subnet. Note: adjust rules as needed after adding resources to the subnet'
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: appGatewaySubnetPrefix
-          destinationAddressPrefix: '*'
-          access: 'Deny'
-          priority: 1000
           direction: 'Outbound'
         }
       }
@@ -304,4 +280,4 @@ output appServicesSubnetName string = vnet::appServiceSubnet.name
 output appGatewaySubnetName string = vnet::appGatewaySubnet.name
 
 @description('The name of the private endpoints subnet.')
-output privateEndpointsSubnetName string = vnet::privateEnpointsSubnet.name
+output privateEndpointsSubnetName string = vnet::privateEndpointsSubnet.name

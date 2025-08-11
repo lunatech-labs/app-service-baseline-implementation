@@ -13,8 +13,11 @@ param sqlAdministratorLogin string
 @secure()
 param sqlAdministratorLoginPassword string
 
+@description('Docker image to use for deployment')
+param dockerImage string
+
 @description('Domain name to use for App Gateway')
-param customDomainName string = 'contoso.com'
+param customDomainName string
 
 @description('The certificate data for app gateway TLS termination. The value is base64 encoded')
 @secure()
@@ -22,9 +25,6 @@ param appGatewayListenerCertificate string
 
 @description('Optional. When true will deploy a cost-optimised environment for development purposes. Note that when this param is true, the deployment is not suitable or recommended for Production environments. Default = false.')
 param developmentEnvironment bool = false
-
-@description('The name of the web deploy file. The file should reside in a deploy container in the storage account. Defaults to SimpleWebApp.zip')
-param publishFileName string = 'SimpleWebApp.zip'
 
 // ---- Availability Zones ----
 var availabilityZones = [ '1', '2', '3' ]
@@ -50,17 +50,6 @@ module networkModule 'network.bicep' = {
     location: location
     baseName: baseName
     developmentEnvironment: developmentEnvironment
-  }
-}
-
-// Deploy storage account with private endpoint and private DNS zone
-module storageModule 'storage.bicep' = {
-  name: 'storageDeploy'
-  params: {
-    location: location
-    baseName: baseName
-    vnetName: networkModule.outputs.vnetNName
-    privateEndpointsSubnetName: networkModule.outputs.privateEndpointsSubnetName
   }
 }
 
@@ -96,10 +85,9 @@ module webappModule 'webapp.bicep' = {
   params: {
     location: location
     baseName: baseName
+    dockerImage: dockerImage
     developmentEnvironment: developmentEnvironment
-    publishFileName: publishFileName
     keyVaultName: secretsModule.outputs.keyVaultName
-    storageName: storageModule.outputs.storageName
     vnetName: networkModule.outputs.vnetNName
     appServicesSubnetName: networkModule.outputs.appServicesSubnetName
     privateEndpointsSubnetName: networkModule.outputs.privateEndpointsSubnetName

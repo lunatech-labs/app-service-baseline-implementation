@@ -13,7 +13,7 @@ param location string = resourceGroup().location
 param appGatewayListenerCertificate string
 param sqlConnectionString string
 
-// existing resource name params 
+// existing resource name params
 param vnetName string
 param privateEndpointsSubnetName string
 
@@ -29,7 +29,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing =  {
 
   resource privateEndpointsSubnet 'subnets' existing = {
     name: privateEndpointsSubnetName
-  }  
+  }
 }
 
 // ---- Key Vault resources ----

@@ -8,34 +8,32 @@ param baseName string
 @description('The resource group location')
 param location string = resourceGroup().location
 
+param dockerImage string
 param developmentEnvironment bool
-param publishFileName string
 
-// existing resource name params 
+// existing resource name params
 param vnetName string
 param appServicesSubnetName string
 param privateEndpointsSubnetName string
-param storageName string
 param keyVaultName string
 param logWorkspaceName string
 
 // variables
 var appName = 'app-${baseName}'
-var appServicePlanName = 'asp-${appName}${uniqueString(subscription().subscriptionId)}'
+var appServicePlanName = 'asp-${appName}'
 var appServiceManagedIdentityName = 'id-${appName}'
-var packageLocation = 'https://${storageName}.blob.${environment().suffixes.storage}/deploy/${publishFileName}'
 var appServicePrivateEndpointName = 'pep-${appName}'
-var appInsightsName= 'appinsights-${appName}'
+var appInsightsName = 'appinsights-${appName}'
 
 var appServicePlanPremiumSku = 'Premium'
-var appServicePlanStandardSku = 'Standard'
+var appServicePlanBasicSku = 'Basic'
 var appServicePlanSettings = {
-  Standard: {
-    name: 'S1'
+  Basic: {
+    name: 'B3'
     capacity: 1
   }
   Premium: {
-    name: 'P2v2'
+    name: 'P1V3'
     capacity: 3
   }
 }
@@ -44,38 +42,28 @@ var appServicesDnsZoneName = 'privatelink.azurewebsites.net'
 var appServicesDnsGroupName = '${appServicePrivateEndpointName}/default'
 
 // ---- Existing resources ----
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing =  {
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = {
   name: vnetName
 
   resource appServicesSubnet 'subnets' existing = {
     name: appServicesSubnetName
-  }  
+  }
   resource privateEndpointsSubnet 'subnets' existing = {
     name: privateEndpointsSubnetName
-  }    
+  }
 }
 
-resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' existing =  {
+resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' existing = {
   name: keyVaultName
-}
-
-resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' existing =  {
-  name: storageName
 }
 
 resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: logWorkspaceName
 }
 
-// Built-in Azure RBAC role that is applied to a Key Vault to grant secrets content read permissions. 
+// Built-in Azure RBAC role that is applied to a Key Vault to grant secrets content read permissions.
 resource keyVaultSecretsUserRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   name: '4633458b-17de-408a-b874-0445c86b69e6'
-  scope: subscription()
-}
-
-// Built-in Azure RBAC role that is applied to a Key storage to grant data reader permissions. 
-resource blobDataReaderRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  name: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
   scope: subscription()
 }
 
@@ -97,33 +85,25 @@ module appServiceSecretsUserRoleAssignmentModule './modules/keyvaultRoleAssignme
   }
 }
 
-// Grant the App Service managed identity storage data reader role permissions
-resource blobDataReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: storage
-  name: guid(resourceGroup().id, appServiceManagedIdentity.name, blobDataReaderRole.id)
-  properties: {
-    roleDefinitionId: blobDataReaderRole.id
-    principalType: 'ServicePrincipal'
-    principalId: appServiceManagedIdentity.properties.principalId
-  }
-}
-
 //App service plan
-resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: appServicePlanName
   location: location
-  sku: developmentEnvironment ? appServicePlanSettings[appServicePlanStandardSku] : appServicePlanSettings[appServicePlanPremiumSku]
+  kind: 'linux'
+  sku: developmentEnvironment
+    ? appServicePlanSettings[appServicePlanBasicSku]
+    : appServicePlanSettings[appServicePlanPremiumSku]
   properties: {
+    reserved: true // Forces Linux OS
     zoneRedundant: !developmentEnvironment
   }
-  kind: 'app'
 }
 
 // Web App
-resource webApp 'Microsoft.Web/sites@2022-09-01' = {
+resource webApp 'Microsoft.Web/sites@2024-04-01' = {
   name: appName
   location: location
-  kind: 'app'
+  kind: 'app,linux,container'
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -132,30 +112,35 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
   }
   properties: {
     serverFarmId: appServicePlan.id
+    vnetRouteAllEnabled: true
+    vnetImagePullEnabled: false
+    vnetContentShareEnabled: true
     virtualNetworkSubnetId: vnet::appServicesSubnet.id
     httpsOnly: false
     keyVaultReferenceIdentity: appServiceManagedIdentity.id
     hostNamesDisabled: false
     siteConfig: {
+      linuxFxVersion: 'DOCKER|${dockerImage}'
+      acrUseManagedIdentityCreds: true
+      acrUserManagedIdentityID: appServiceManagedIdentity.id
       vnetRouteAllEnabled: true
       http20Enabled: true
+//       minTlsVersion: '1.3'
+//       minTlsCipherSuite: 'TLS_AES_256_GCM_SHA384'
       publicNetworkAccess: 'Disabled'
       alwaysOn: true
     }
   }
   dependsOn: [
     appServiceSecretsUserRoleAssignmentModule
-    blobDataReaderRoleAssignment
   ]
 }
 
 // App Settings
-resource appsettings 'Microsoft.Web/sites/config@2022-09-01' = {
+resource appsettings 'Microsoft.Web/sites/config@2024-04-01' = {
   name: 'appsettings'
   parent: webApp
   properties: {
-    WEBSITE_RUN_FROM_PACKAGE: packageLocation
-    WEBSITE_RUN_FROM_PACKAGE_BLOB_MI_RESOURCE_ID: appServiceManagedIdentity.id
     AZURE_SQL_CONNECTIONSTRING: '@Microsoft.KeyVault(SecretUri=https://${keyVault.name}${environment().suffixes.keyvaultDns}/secrets/adWorksConnString)'
     APPINSIGHTS_INSTRUMENTATIONKEY: appInsights.properties.InstrumentationKey
     APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
@@ -264,51 +249,6 @@ resource webAppDiagSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
       }
     ]
   }
-}
-
-// App service plan auto scale settings
-resource appServicePlanAutoScaleSettings 'Microsoft.Insights/autoscalesettings@2022-10-01' = {
-  name: '${appServicePlan.name}-autoscale'
-  location: location
-  properties: {
-    enabled: true
-    targetResourceUri: appServicePlan.id
-    profiles: [
-      {
-        name: 'Scale out condition'
-        capacity: {
-          maximum: '5'
-          default: '1'
-          minimum: '1'
-        }
-        rules: [
-          {
-            scaleAction: {
-              type: 'ChangeCount'
-              direction: 'Increase'
-              cooldown: 'PT5M'
-              value: '1'
-            }
-            metricTrigger: {
-              metricName: 'CpuPercentage'
-              metricNamespace: 'microsoft.web/serverfarms'
-              operator: 'GreaterThan'
-              timeAggregation: 'Average'
-              threshold: 70
-              metricResourceUri: appServicePlan.id
-              timeWindow: 'PT10M'
-              timeGrain: 'PT1M'
-              statistic: 'Average'
-            }
-          }
-        ]
-      }
-    ]
-  }
-  dependsOn: [
-    webApp
-    appServicePlanDiagSettings
-  ]
 }
 
 // create application insights resource
