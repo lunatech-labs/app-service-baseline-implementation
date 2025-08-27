@@ -125,8 +125,8 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
       acrUserManagedIdentityID: appServiceManagedIdentity.id
       vnetRouteAllEnabled: true
       http20Enabled: true
-//       minTlsVersion: '1.3'
-//       minTlsCipherSuite: 'TLS_AES_256_GCM_SHA384'
+      minTlsVersion: '1.3'
+      minTlsCipherSuite: 'TLS_AES_256_GCM_SHA384'
       publicNetworkAccess: 'Disabled'
       alwaysOn: true
     }

@@ -27,9 +27,8 @@ param appGatewayListenerCertificate string
 param developmentEnvironment bool = false
 
 // ---- Availability Zones ----
-var availabilityZones = [ '1', '2', '3' ]
+var availabilityZones = ['1', '2', '3']
 var logWorkspaceName = 'log-${baseName}'
-
 
 // ---- Log Analytics workspace ----
 resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
@@ -92,7 +91,7 @@ module webappModule 'webapp.bicep' = {
     appServicesSubnetName: networkModule.outputs.appServicesSubnetName
     privateEndpointsSubnetName: networkModule.outputs.privateEndpointsSubnetName
     logWorkspaceName: logWorkspace.name
-   }
+  }
 }
 
 //Deploy an Azure Application Gateway with WAF v2 and a custom domain name.
@@ -110,6 +109,5 @@ module gatewayModule 'gateway.bicep' = {
     keyVaultName: secretsModule.outputs.keyVaultName
     gatewayCertSecretUri: secretsModule.outputs.gatewayCertSecretUri
     logWorkspaceName: logWorkspace.name
-   }
+  }
 }
-

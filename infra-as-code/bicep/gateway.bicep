@@ -29,10 +29,10 @@ var appGateWayName = 'agw-${baseName}'
 var appGatewayManagedIdentityName = 'id-${appGateWayName}'
 var appGatewayPublicIpName = 'pip-${baseName}'
 var appGateWayFqdn = 'fe-${baseName}'
-var wafPolicyName= 'waf-${baseName}'
+var wafPolicyName = 'waf-${baseName}'
 
 // ---- Existing resources ----
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing =  {
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = {
   name: vnetName
 
   resource appGatewaySubnet 'subnets' existing = {
@@ -236,14 +236,22 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
         name: 'listener-https-${baseName}'
         properties: {
           frontendIPConfiguration: {
-            id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', appGateWayName, 'app-gateway-public-ip')
+            id: resourceId(
+              'Microsoft.Network/applicationGateways/frontendIPConfigurations',
+              appGateWayName,
+              'app-gateway-public-ip'
+            )
           }
           frontendPort: {
             id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', appGateWayName, 'port-443')
           }
           protocol: 'Https'
           sslCertificate: {
-            id: resourceId('Microsoft.Network/applicationGateways/sslCertificates', appGateWayName, '${appGateWayName}-ssl-certificate')
+            id: resourceId(
+              'Microsoft.Network/applicationGateways/sslCertificates',
+              appGateWayName,
+              '${appGateWayName}-ssl-certificate'
+            )
           }
           hostName: customDomainName
           hostNames: []
@@ -258,13 +266,25 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
           ruleType: 'Basic'
           priority: 100
           httpListener: {
-            id: resourceId('Microsoft.Network/applicationGateways/httpListeners', appGateWayName, 'listener-https-${baseName}')
+            id: resourceId(
+              'Microsoft.Network/applicationGateways/httpListeners',
+              appGateWayName,
+              'listener-https-${baseName}'
+            )
           }
           backendAddressPool: {
-            id: resourceId('Microsoft.Network/applicationGateways/backendAddressPools', appGateWayName, 'pool-${appName}')
+            id: resourceId(
+              'Microsoft.Network/applicationGateways/backendAddressPools',
+              appGateWayName,
+              'pool-${appName}'
+            )
           }
           backendHttpSettings: {
-            id: resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', appGateWayName, 'backend-https-${baseName}')
+            id: resourceId(
+              'Microsoft.Network/applicationGateways/backendHttpSettingsCollection',
+              appGateWayName,
+              'backend-https-${baseName}'
+            )
           }
         }
       }

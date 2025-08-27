@@ -98,7 +98,6 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' = {
   resource privateEndpointsSubnet 'subnets' existing = {
     name: 'snet-private-endpoints'
   }
-
 }
 
 //App Gateway subnet NSG
@@ -136,19 +135,19 @@ resource appGatewaySubnetNsg 'Microsoft.Network/networkSecurityGroups@2022-11-01
         }
       }
       {
-          name: 'AppGw.In.Allow8443.Internet'
-          properties: {
-            description: 'Allow ALL inbound web traffic on port 8443'
-            protocol: 'Tcp'
-            sourcePortRange: '*'
-            destinationPortRange: '8443'
-            sourceAddressPrefix: 'Internet'
-            destinationAddressPrefix: appGatewaySubnetPrefix
-            access: 'Allow'
-            priority: 111
-            direction: 'Inbound'
-          }
+        name: 'AppGw.In.Allow8443.Internet'
+        properties: {
+          description: 'Allow ALL inbound web traffic on port 8443'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '8443'
+          sourceAddressPrefix: 'Internet'
+          destinationAddressPrefix: appGatewaySubnetPrefix
+          access: 'Allow'
+          priority: 111
+          direction: 'Inbound'
         }
+      }
       {
         name: 'AppGw.In.Allow.LoadBalancer'
         properties: {
