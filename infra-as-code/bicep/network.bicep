@@ -8,36 +8,21 @@ param baseName string
 @description('The resource group location')
 param location string = resourceGroup().location
 
-param developmentEnvironment bool
-
 // variables
 var vnetName = 'vnet-${baseName}'
-var ddosPlanName = 'ddos-${baseName}'
 
-var vnetAddressPrefix = '10.0.0.0/16'
-var appGatewaySubnetPrefix = '10.0.1.0/24'
-var appServicesSubnetPrefix = '10.0.0.0/24'
-var privateEndpointsSubnetPrefix = '10.0.2.0/27'
-
-//Temp disable DDoS protection
-var enableDdosProtection = !developmentEnvironment
+var vnetAddressPrefix = '172.18.48.0/20'
+var appServicesSubnetPrefix = '172.18.48.0/24'
+var appGatewaySubnetPrefix = '172.18.49.0/24'
+var privateEndpointsSubnetPrefix = '172.18.50.0/24'
 
 // ---- Networking resources ----
-
-// DDoS Protection Plan
-resource ddosProtectionPlan 'Microsoft.Network/ddosProtectionPlans@2022-11-01' = if (enableDdosProtection) {
-  name: ddosPlanName
-  location: location
-  properties: {}
-}
 
 //vnet and subnets
 resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' = {
   name: vnetName
   location: location
   properties: {
-    enableDdosProtection: enableDdosProtection
-    ddosProtectionPlan: enableDdosProtection ? { id: ddosProtectionPlan.id } : null
     addressSpace: {
       addressPrefixes: [
         vnetAddressPrefix

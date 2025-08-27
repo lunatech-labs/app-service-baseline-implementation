@@ -8,13 +8,9 @@ param baseName string
 @description('The resource group location')
 param location string = resourceGroup().location
 
-@description('Optional. When true will deploy a cost-optimised environment for development purposes.')
-param developmentEnvironment bool
-
 @description('Domain name to use for App Gateway')
 param customDomainName string
 
-param availabilityZones array
 param gatewayCertSecretUri string
 
 // existing resource name params
@@ -76,7 +72,6 @@ module appGatewaySecretsUserRoleAssignmentModule './modules/keyvaultRoleAssignme
 resource appGatewayPublicIp 'Microsoft.Network/publicIPAddresses@2022-11-01' = {
   name: appGatewayPublicIpName
   location: location
-  zones: !developmentEnvironment ? availabilityZones : null
   sku: {
     name: 'Standard'
   }
@@ -121,7 +116,6 @@ resource wafPolicy 'Microsoft.Network/ApplicationGatewayWebApplicationFirewallPo
 resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
   name: appGateWayName
   location: location
-  zones: !developmentEnvironment ? availabilityZones : null
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -290,8 +284,8 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
       }
     ]
     autoscaleConfiguration: {
-      minCapacity: developmentEnvironment ? 2 : 3
-      maxCapacity: developmentEnvironment ? 3 : 5
+      minCapacity: 2
+      maxCapacity: 3
     }
   }
   dependsOn: [

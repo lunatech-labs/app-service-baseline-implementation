@@ -17,7 +17,7 @@ param sqlAdministratorLoginPassword string
 param dockerImage string
 
 @description('Domain name to use for App Gateway')
-param customDomainName string
+param domainName string
 
 @description('The certificate data for app gateway TLS termination. The value is base64 encoded')
 @secure()
@@ -26,8 +26,6 @@ param appGatewayListenerCertificate string
 @description('Optional. When true will deploy a cost-optimised environment for development purposes. Note that when this param is true, the deployment is not suitable or recommended for Production environments. Default = false.')
 param developmentEnvironment bool = false
 
-// ---- Availability Zones ----
-var availabilityZones = ['1', '2', '3']
 var logWorkspaceName = 'log-${baseName}'
 
 // ---- Log Analytics workspace ----
@@ -48,7 +46,6 @@ module networkModule 'network.bicep' = {
   params: {
     location: location
     baseName: baseName
-    developmentEnvironment: developmentEnvironment
   }
 }
 
@@ -100,9 +97,7 @@ module gatewayModule 'gateway.bicep' = {
   params: {
     location: location
     baseName: baseName
-    developmentEnvironment: developmentEnvironment
-    availabilityZones: availabilityZones
-    customDomainName: customDomainName
+    customDomainName: domainName
     appName: webappModule.outputs.appName
     vnetName: networkModule.outputs.vnetNName
     appGatewaySubnetName: networkModule.outputs.appGatewaySubnetName

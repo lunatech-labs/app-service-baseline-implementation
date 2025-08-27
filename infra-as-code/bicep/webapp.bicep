@@ -34,7 +34,7 @@ var appServicePlanSettings = {
   }
   Premium: {
     name: 'P1V3'
-    capacity: 3
+    capacity: 1
   }
 }
 
@@ -95,7 +95,6 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
     : appServicePlanSettings[appServicePlanPremiumSku]
   properties: {
     reserved: true // Forces Linux OS
-    zoneRedundant: !developmentEnvironment
   }
 }
 
