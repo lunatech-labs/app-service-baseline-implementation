@@ -129,10 +129,6 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
     }
     sslPolicy: {
       policyType: 'CustomV2'
-      cipherSuites: [
-        'TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'
-        'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256'
-      ]
       minProtocolVersion: 'TLSv1_3'
     }
 
