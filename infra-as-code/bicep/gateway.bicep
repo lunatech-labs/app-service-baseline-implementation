@@ -129,6 +129,7 @@ resource appGateWay 'Microsoft.Network/applicationGateways@2022-11-01' = {
     }
     sslPolicy: {
       policyType: 'CustomV2'
+      cipherSuites: []
       minProtocolVersion: 'TLSv1_3'
     }
 
