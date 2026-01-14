@@ -13,7 +13,7 @@ param location string = resourceGroup().location
 param appGatewayListenerCertificate string
 param sqlConnectionString string
 
-// existing resource name params 
+// existing resource name params
 param vnetName string
 param privateEndpointsSubnetName string
 
@@ -24,12 +24,12 @@ var keyVaultDnsGroupName = '${keyVaultPrivateEndpointName}/default'
 var keyVaultDnsZoneName = 'privatelink.vaultcore.azure.net' //Cannot use 'privatelink${environment().suffixes.keyvaultDns}', per https://github.com/Azure/bicep/issues/9708
 
 // ---- Existing resources ----
-resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing =  {
+resource vnet 'Microsoft.Network/virtualNetworks@2022-11-01' existing = {
   name: vnetName
 
   resource privateEndpointsSubnet 'subnets' existing = {
     name: privateEndpointsSubnetName
-  }  
+  }
 }
 
 // ---- Key Vault resources ----
@@ -126,7 +126,7 @@ resource sqlConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-02-01
 }
 
 @description('The name of the key vault account.')
-output keyVaultName string= keyVault.name
+output keyVaultName string = keyVault.name
 
 @description('Uri to the secret holding the cert.')
 output gatewayCertSecretUri string = keyVault::kvsGatewayPublicCert.properties.secretUri

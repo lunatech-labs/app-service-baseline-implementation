@@ -94,13 +94,13 @@ Note: Take into account that sql database enforce [password complexity](https://
    - You choose a valid resource group name
 
 ```bash
-   LOCATION=westus3
+   LOCATION=westeurope
    BASE_NAME=<base-resource-name (between 3 and 6 characters)>
 
    RESOURCE_GROUP=<resource-group-name>
    az group create --location $LOCATION --resource-group $RESOURCE_GROUP
 
-   az deployment group create --template-file ./infra-as-code/bicep/main.bicep \
+   az deployment group what-if --template-file ./infra-as-code/bicep/main.bicep \
      --resource-group $RESOURCE_GROUP \
      --parameters @./infra-as-code/bicep/parameters.json \
      --parameters baseName=$BASE_NAME
